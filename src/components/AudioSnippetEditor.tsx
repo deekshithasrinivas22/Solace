@@ -7,7 +7,7 @@ import AudioControls from "./AudioControls";
 import TimelineSlider from "./TimelineSlider";
 import ZoomControls from "./ZoomControls";
 
-const MAX_SNIPPET = 30;
+const MAX_SNIPPET = 70;
 
 export interface SnippetSelection {
   snippetStart: number;

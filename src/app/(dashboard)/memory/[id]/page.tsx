@@ -1,9 +1,11 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { Expand, X } from "lucide-react";
 import { useParams, useRouter } from "next/navigation";
 import { format } from "date-fns";
 import { motion } from "framer-motion";
+import Image from "next/image";
 import {
   Heart,
   MapPin,
@@ -11,6 +13,8 @@ import {
   Play,
   ArrowLeft,
   Loader2,
+  ChevronLeft,
+  ChevronRight,
 } from "lucide-react";
 import { PhotoCarousel } from "@/components/PhotoCarousel";
 import { MusicPlayer } from "@/components/MusicPlayer";
@@ -31,6 +35,9 @@ export default function MemoryDetailPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [showReplay, setShowReplay] = useState(false);
   const toggleFavoriteStore = useMemoryStore((s) => s.toggleFavorite);
+  const [fullscreen, setFullscreen] = useState(false);
+  const [photoIndex, setPhotoIndex] = useState(0);
+  // console.log(memory?.music);
 
   useEffect(() => {
     async function fetchMemory() {
@@ -128,6 +135,13 @@ export default function MemoryDetailPage() {
             <Button
               variant="ghost"
               size="icon"
+              onClick={() => setFullscreen(true)}
+            >
+              <Expand className="h-5 w-5" />
+            </Button>
+            <Button
+              variant="ghost"
+              size="icon"
               onClick={handleDelete}
               className="text-destructive hover:text-destructive"
             >
@@ -173,6 +187,66 @@ export default function MemoryDetailPage() {
 
       {showReplay && (
         <MemoryReplay memory={memory} onClose={() => setShowReplay(false)} />
+      )}
+      {fullscreen && (
+        <div className="fixed inset-0 z-[100] bg-black flex items-center justify-center">
+          {/* Close */}
+          <Button
+            variant="ghost"
+            size="icon"
+            className="absolute top-5 right-5 z-20 text-white hover:bg-white/10"
+            onClick={() => setFullscreen(false)}
+          >
+            <X className="h-7 w-7" />
+          </Button>
+
+          {/* Previous */}
+          {memory.photos.length > 1 && (
+            <Button
+              variant="ghost"
+              size="icon"
+              className="absolute left-5 top-1/2 -translate-y-1/2 z-20 text-white hover:bg-white/10"
+              onClick={() =>
+                setPhotoIndex((i) =>
+                  i === 0 ? memory.photos.length - 1 : i - 1
+                )
+              }
+            >
+              <ChevronLeft className="h-8 w-8" />
+            </Button>
+          )}
+
+          {/* Next */}
+          {memory.photos.length > 1 && (
+            <Button
+              variant="ghost"
+              size="icon"
+              className="absolute right-5 top-1/2 -translate-y-1/2 z-20 text-white hover:bg-white/10"
+              onClick={() =>
+                setPhotoIndex((i) =>
+                  (i + 1) % memory.photos.length
+                )
+              }
+            >
+              <ChevronRight className="h-8 w-8" />
+            </Button>
+          )}
+
+          {/* Image */}
+          <Image
+            src={memory.photos[photoIndex].url}
+            alt={memory.title}
+            width={1800}
+            height={1200}
+            className="max-w-[95vw] max-h-[95vh] object-contain"
+            priority
+          />
+
+          {/* Counter */}
+          <div className="absolute bottom-6 left-1/2 -translate-x-1/2 rounded-full bg-black/60 px-4 py-2 text-white text-sm z-20">
+            {photoIndex + 1} / {memory.photos.length}
+          </div>
+        </div>
       )}
     </>
   );

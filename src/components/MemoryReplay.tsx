@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import Image from "next/image";
 import { motion, AnimatePresence } from "framer-motion";
 import { X, ChevronLeft, ChevronRight, Pause, Play } from "lucide-react";
@@ -18,6 +18,7 @@ export function MemoryReplay({ memory, onClose }: MemoryReplayProps) {
   const [photoIndex, setPhotoIndex] = useState(0);
   const [isPlaying, setIsPlaying] = useState(true);
   const [showInfo, setShowInfo] = useState(true);
+  const audioRef = useRef<HTMLAudioElement>(null);
 
   const mood = MOODS.find((m) => m.value === memory.mood);
   const photos = memory.photos;
@@ -32,6 +33,48 @@ export function MemoryReplay({ memory, onClose }: MemoryReplayProps) {
     const timer = setInterval(nextPhoto, 4000);
     return () => clearInterval(timer);
   }, [isPlaying, photos.length, nextPhoto]);
+  useEffect(() => {
+    const audio = audioRef.current;
+
+    if (!audio || !memory.music) return;
+
+    const start = memory.music.snippetStart;
+    const end = memory.music.snippetEnd;
+
+    const handleLoaded = () => {
+      audio.currentTime = start;
+
+      if (isPlaying) {
+        audio.play().catch(console.error);
+      }
+    };
+
+    const handleTime = () => {
+      if (audio.currentTime >= end) {
+        audio.currentTime = start;
+      }
+    };
+
+    audio.addEventListener("loadedmetadata", handleLoaded);
+    audio.addEventListener("timeupdate", handleTime);
+
+    return () => {
+      audio.removeEventListener("loadedmetadata", handleLoaded);
+      audio.removeEventListener("timeupdate", handleTime);
+    };
+  }, [memory.music]);
+
+  useEffect(() => {
+    const audio = audioRef.current;
+
+    if (!audio) return;
+
+    if (isPlaying) {
+      audio.play().catch(console.error);
+    } else {
+      audio.pause();
+    }
+  }, [isPlaying]);
 
   useEffect(() => {
     const handleKey = (e: KeyboardEvent) => {
@@ -170,9 +213,8 @@ export function MemoryReplay({ memory, onClose }: MemoryReplayProps) {
             {photos.map((_, i) => (
               <div
                 key={i}
-                className={`h-1 rounded-full transition-all duration-300 ${
-                  i === photoIndex ? "w-6 bg-white" : "w-1.5 bg-white/40"
-                }`}
+                className={`h-1 rounded-full transition-all duration-300 ${i === photoIndex ? "w-6 bg-white" : "w-1.5 bg-white/40"
+                  }`}
               />
             ))}
           </div>
@@ -182,20 +224,9 @@ export function MemoryReplay({ memory, onClose }: MemoryReplayProps) {
       {hasMusic && memory.music && (
         // eslint-disable-next-line jsx-a11y/media-has-caption
         <audio
-          ref={(el) => {
-            if (el && isPlaying) {
-              el.currentTime = memory.music!.snippetStart;
-              el.play().catch(() => {});
-            }
-          }}
+          ref={audioRef}
           src={memory.music.audioUrl}
-          autoPlay={isPlaying}
-          onTimeUpdate={(e) => {
-            const audio = e.currentTarget;
-            if (audio.currentTime >= memory.music!.snippetEnd) {
-              audio.currentTime = memory.music!.snippetStart;
-            }
-          }}
+          preload="auto"
           className="hidden"
         />
       )}

@@ -29,27 +29,52 @@ export function MusicPlayer({ music, className, autoPlay = false }: MusicPlayerP
     const audio = audioRef.current;
     if (!audio) return;
 
-    audio.currentTime = music.snippetStart;
+    const handleLoaded = () => {
+      audio.currentTime = music.snippetStart;
+      setCurrentTime(music.snippetStart);
+    };
 
     const handleTimeUpdate = () => {
       setCurrentTime(audio.currentTime);
+
       if (audio.currentTime >= music.snippetEnd) {
         audio.pause();
         audio.currentTime = music.snippetStart;
-        setIsPlaying(false);
         setCurrentTime(music.snippetStart);
+        setIsPlaying(false);
       }
     };
 
+    audio.addEventListener("loadedmetadata", handleLoaded);
     audio.addEventListener("timeupdate", handleTimeUpdate);
-    return () => audio.removeEventListener("timeupdate", handleTimeUpdate);
+
+    return () => {
+      audio.removeEventListener("loadedmetadata", handleLoaded);
+      audio.removeEventListener("timeupdate", handleTimeUpdate);
+    };
   }, [music.snippetStart, music.snippetEnd]);
 
   useEffect(() => {
     const audio = audioRef.current;
     if (!audio) return;
+
     if (isPlaying) {
-      audio.play().catch(() => setIsPlaying(false));
+      const playAudio = async () => {
+        try {
+          if (audio.readyState < 2) {
+            await new Promise<void>((resolve) => {
+              audio.oncanplay = () => resolve();
+            });
+          }
+
+          await audio.play();
+        } catch (err) {
+          console.error(err);
+          setIsPlaying(false);
+        }
+      };
+
+      playAudio();
     } else {
       audio.pause();
     }
@@ -69,7 +94,27 @@ export function MusicPlayer({ music, className, autoPlay = false }: MusicPlayerP
 
   return (
     <div className={cn("glass-card p-4", className)}>
-      <audio ref={audioRef} src={music.audioUrl} preload="metadata" />
+      <audio
+        ref={audioRef}
+        src={music.audioUrl}
+        preload="auto"
+        crossOrigin="anonymous"
+        onLoadedMetadata={() => {
+          console.log("Metadata loaded");
+        }}
+        onCanPlay={() => {
+          console.log("Can play");
+        }}
+        onPlay={() => {
+          console.log("Playing");
+        }}
+        onPause={() => {
+          console.log("Paused");
+        }}
+        onError={(e) => {
+          console.error("Audio error", e);
+        }}
+      />
 
       <div className="flex items-center gap-4">
         {music.coverImage && (
